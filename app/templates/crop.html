@@ -1,0 +1,944 @@
+{% extends 'layout.html' %} 
+{% block body %}
+
+<style>
+    html body {
+        background-color: rgb(206, 206, 228);
+    }
+</style>
+
+<!-- Form Section -->
+<br /><br />
+<h2 style="text-align: center; margin: 0px; color: black">
+    <b>Find out the most suitable crop to grow in your farm</b>
+</h2>
+<br />
+
+<div
+    style="
+        width: 350px;
+        height: 50rem;
+        margin: 0px auto;
+        color: black;
+        border-radius: 25px;
+        padding: 10px 10px;
+    "
+>
+    <form method="POST" action="{{ url_for('crop_prediction') }}">
+        <div class="form-group">
+            <label for="Nitrogen" style="font-size: 17px"><b>Nitrogen</b></label>
+            <input
+                type="number"
+                class="form-control"
+                id="Nitrogen"
+                name="nitrogen"
+                placeholder="Enter the value (example:50)"
+                style="font-weight: bold"
+                required
+            />
+        </div>
+        <div class="form-group">
+            <label for="Phosphorous" style="font-size: 17px"><b>Phosphorous</b></label>
+            <input
+                type="number"
+                class="form-control"
+                id="Phosphorous"
+                name="phosphorous"
+                placeholder="Enter the value (example:50)"
+                style="font-weight: bold"
+                required
+            />
+        </div>
+
+        <div class="form-group">
+            <label for="Pottasium" style="font-size: 17px"><b>Pottasium</b></label>
+            <input
+                type="number"
+                class="form-control"
+                id="Pottasium"
+                name="pottasium"
+                placeholder="Enter the value (example:50)"
+                style="font-weight: bold"
+                required
+            />
+        </div>
+        <div class="form-group">
+            <label for="ph" style="font-size: 17px"><b>PH Level</b></label>
+            <input
+                type="number"
+                step="0.01"
+                class="form-control"
+                id="ph"
+                name="ph"
+                placeholder="Enter the value"
+                style="font-weight: bold"
+                required
+            />
+        </div>
+        
+        <div class="form-group">
+            <label for="State" style="font-size: 17px;"><b>State</b></label>
+            <select
+                onchange="print_city('state', this.selectedIndex);"
+                id="sts"
+                name="stt"
+                class="form-control"
+                style="font-weight: bold; color: black;"
+                required
+            ></select>
+            <br />
+            <label for="City" style="font-size: 17px;"><b>City</b></label>
+            <select
+                id="state"
+                class="form-control"
+                name="city"
+                style="font-weight: bold; color: black;"
+                required
+            ></select>
+            <br />
+            <label for="Rainfall" style="font-size: 17px;"><b>Rainfall (in mm)</b></label>
+            <input
+                type="number"
+                step="0.01"
+                class="form-control"
+                id="Rainfall"
+                name="rainfall"
+                placeholder="Enter the value"
+                style="font-weight: bold"
+                required
+                readonly
+            />
+            <!-- The Rainfall field is set to readonly to prevent manual editing -->
+        </div>
+        <div class="d-flex justify-content-center">
+            <button
+                type="submit"
+                class="btn btn-info"
+                style="color: black; font-weight: bold; width: 130px; height:50px; border-radius:12px; font-size: 21px;"
+            >
+                Predict
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- JavaScript Section -->
+<script language="javascript">
+    // State Array
+    var state_arr = new Array(
+    "Andaman & Nicobar Islands", 
+    "Andhra Pradesh & Telangana", 
+    "Arunachal Pradesh", 
+    "Assam", 
+    "Bihar", 
+    "Chandigarh", 
+    "Chhattisgarh", 
+    "Dadra and Nagar Haveli", 
+    "Daman & Diu", 
+    "Delhi", 
+    "Goa", 
+    "Gujarat", 
+    "Haryana", 
+    "Himachal Pradesh", 
+    "Jammu & Kashmir", 
+    "Jharkhand", 
+    "Karnataka", 
+    "Kerala", 
+    "Madhya Pradesh", 
+    "Maharashtra"
+);
+
+var s_a = new Array();
+s_a[0]="";
+s_a[1] = "NICOBAR | SOUTH ANDAMAN | N & M ANDAMAN";
+s_a[2] = "EAST GODAVARI | WEST GODAVARI | GUNTUR | KRISHNA | NELLORE | PRAKASAM | SRIKAKULAM | VISAKHAPATNAM | VIZIANAGARAM | ADILABAD | HYDERABAD | KARIMNAGAR | KHAMMAM | MAHABUBNAGAR | MEDAK | NALGONDA | NIZAMABAD | WARANGAL | RANGAREDDY | ANANTAPUR | CHITTOOR | KUDDAPAH | KURNOOL";
+s_a[3] = "LOHIT | EAST SIANG | SUBANSIRI F.D | TIRAP | ANJAW (LOHIT) | LOWER DIBANG | CHANGLANG | PAPUM PARE | LOW SUBANSIRI | UPPER SIANG | WEST SIANG | DIBANG VALLEY | WEST KAMENG | EAST KAMENG | TAWANG(W KAME | KURUNG KUMEY";
+s_a[4] = "CACHAR | DARRANG | GOALPARA | KAMRUP | LAKHIMPUR | NORTH CACHAR | NAGAON | SIVASAGAR | BARPETA | DHUBRI | DIBRUGARH | JORHAT | KARIMGANJ | KOKRAJHAR | SHONITPUR | GOLAGHAT | TINSUKIA | HAILAKANDI | DHEMAJI(LAKHI | KARBI ANGLONG | UDALGURI(DARA | KAMRUP METROP | CHIRANG(BONGAI | BAKSA BARPETA | BONGAIGAON | MORIGAON | NALBARI";
+s_a[5] = "BHAGALPUR | EAST CHAMPARAN | DARBHANGA | GAYA | MUNGER | MUZAFFARPUR | WEST CHAMPARAN | PURNEA | GOPALGANJ | MADHUBANI | AURANGABAD | BEGUSARAI | BHOJPUR | NALANDA | PATNA | KATIHAR | KHAGARIA | SARAN | MADHEPURA | NAWADA | ROHTAS | SAMASTIPUR | SITAMARHI | SIWAN | VAISHALI | JAHANABAD | BUXAR | ARARIA | BANKA | BHABUA | JAMUI | KISHANGANJ | SHEIKHPURA | SUPAUL | LAKHISARAI | SHEOHAR | ARWAL | SAHARSA";
+s_a[6] = "BHAGALPUR | EAST CHAMPARAN | DARBHANGA | BASTAR | BILASPUR | DURG | RAIGARH | RAIPUR | SURGUJA | RAJNANDGAON | DANTEWADA | KANKER (NORTH) | JANJGIR-CHAMP | KORBA | JASHPUR | DHAMTARI | MAHASAMUND | KORIYA | KOWARDHA (KABIRDHAM) | NARAYANPUR | BIJAPUR"
+s_a[7] = "BASTAR | BILASPUR | DURG | RAIGARH | RAIPUR | SURGUJA | RAJNANDGAON | DANTEWADA | KANKER (NORH | JANJGIR-CHAMP | KORBA | JASHPUR | DHAMTARI | MAHASAMUND | KORIYA | KOWARDHA (KAB | NARAYANPUR | BIJAPUR";
+s_a[8] = "DNH";
+s_a[9] = "DAMAN | DIU";
+s_a[10] = "NEW DELHI | CENTRAL DELHI | EAST DELHI | NORTH DELHI | NE DELHI | SW DELHI | NW DELHI | SOUTH DELHI | WEST DELHI";
+s_a[11] = "NORTH GOA | SOUTH GOA";
+s_a[12] = "AHMEDABAD | BANASKANTHA | BARODA | BHARUCH | VALSAD | DANGS | KHEDA | MEHSANA | PANCHMAHALS | SABARKANTHA | SURAT | GANDHINAGAR | NARMADA(BRC) | NAVSARI(VSD) | ANAND(KHR) | PATAN(MHSN) | DAHOD(PNML) | TAPI(SRT) | AMRELI | BHAVNAGAR | JAMNAGAR | JUNAGADH | KACHCHH | PORBANDAR | RAJKOT | SURENDRANAGAR";
+s_a[13] = "AMBALA | BHIWANI | FARIDABAD | GURGAON | HISAR | JIND | KARNAL | KURUKSHETRA | MAHENDRAGARH | ROHTAK | SIRSA | SONIPAT | YAMUNANAGAR | REWARI | FATEHABAD | PANCHKULA | KAITHAL | JHAJJAR | PALWAL | MEWAT | CHARKI DADRI";
+s_a[14] = "BILASPUR | CHAMBA | HAMIRPUR | KANGRA | KINNAUR | KULLU | LAHUL & SPITI | MANDI | SHIMLA | SIRMAUR | SOLAN | UNA";
+s_a[15] = "JAMMU | KATHUA | UDHAMPUR | DODA | POONCH | RAJOURI | ANANTNAG | BARAMULLA | KUPWARA | PULWAMA | SRINAGAR | BADGAM | LADAKH(LEH) | KARGIL";
+s_a[16] = "BOKARO | CHATRA | DEOGHAR | DHANBAD | DUMKA | GARHWA | GIRIDIH | GODDA | GUMLA | HAZARIBAGH | KODERMA | LATEHAR | LOHARDAGA | PALAMU | RANCHI | SAHEBGANJ | SERAIKELA-KHA | SIMDEGA | WEST SINGHBH | EAST SINGHBHU";
+s_a[17] = "BANGALORE URBA | BANGALORE RURA | BELGAUM | BELLARY | BIDAR | BIJAPUR | CHIKMAGALUR | CHITRADURGA | DHARWAD | GULBARGA | HASSAN | KODAGU | KOLAR | MANDYA | MYSORE | RAICHUR | SHIMOGA | TUMKUR | UTTARA KANNAD | DAVANGERE | CHAMARAJANAGA | UDUPI | CHIKKABALLAPU | RAMANAGARA | GADAG | YADGIR";
+s_a[18] = "ALAPPUZHA | ERNAKULAM | IDUKKI | KANNUR | KASARGOD | KOLLAM | KOTTAYAM | KOZHIKODE | MALAPPURAM | PALAKKAD | PATHANAMTHITTA | TRIVANDRUM | THRISSUR | WAYANAD";
+s_a[19] = "BHOPAL | HOSHANGABAD | BETUL | HARDA | RAISEN | VIDISHA | CHHATARPUR | PANNA | SAGAR | TIKAMGARH | DAMOH | DATIA | GWALIOR | SHIVPURI | GUNA | ASHOKNAGAR | MORENA | SHEOPUR | BHIND | AGAR MALWA | ALIRAJPUR | ANUPPUR | BALAGHAT | BARWANI | BETUL | BURHANPUR | CHHINDWARA | DEWAS | DHAR | DINDORI | HARDA | HOSHANGABAD | INDORE | JABALPUR | JHABUA | KATNI | KHANDWA | KHARGONE | MANDLA | MANDSAUR | NARSINGHPUR | NEEMUCH | PANNA | RAISEN | RAJGARH | RATLAM | REWA | SAGAR | SATNA | SEHORE | SEONI | SHAHDOL | SHAJAPUR | SHEOPUR | SHIVPURI | SIDHI | SINGRAULI | TIKAMGARH | UJJAIN | UMARIA | VIDISHA";
+s_a[20] = "AHMADNAGAR | AKOLA | AMRAVATI | AURANGABAD | BEED | BHANDARA | BULDANA | CHANDRAPUR | DHULE | GADCHIROLI | GONDIA | HINGOLI | JALGAON | JALNA | KOLHAPUR | LATUR | MUMBAI CITY | MUMBAI SUBURB | NAGPUR | NANDED | NANDURBAR | NASHIK | OSMANABAD | PARBHANI | PUNE | RAIGAD | RATNAGIRI | SANGLI | SATARA | SINDHUDURG | SOLAPUR | THANE | WARDHA | WASHIM | YAVATMAL";
+
+    // ... Initialize other states' cities similarly
+
+    // Rainfall data mapping (in mm)
+    // Rainfall data mapping (in mm)
+var rainfall_data = {
+    // Andaman & Nicobar Islands
+    "NICOBAR": "326",
+    "SOUTH ANDAMAN": "301.2",
+    "N & M ANDAMAN": "276.1",
+
+    // Andhra Pradesh
+    "EAST GODAVARI": "199",
+    "WEST GODAVARI": "197.8",
+    "GUNTUR": "143.9",
+    "KRISHNA": "164.2",
+    "NELLORE": "248.2",
+    "PRAKASAM": "181.9",
+    "SRIKAKULAM": "211.4",
+    "VISAKHAPATNAM": "204.3",
+    "VIZIANAGARAM": "188.1",
+    "ADILABAD": "83",
+    "HYDERABAD": "95.6",
+    "KARIMNAGAR": "85.9",
+    "KHAMMAM": "106.9",
+    "MAHABUBNAGAR": "85.4",
+    "MEDAK": "86.6",
+    "NALGONDA": "105.8",
+    "NIZAMABAD": "91.3",
+    "WARANGAL": "88.9",
+    "RANGAREDDY": "94.5",
+    "ANANTAPUR": "115",
+    "CHITTOOR": "167.2",
+    "KUDDAPAH": "137.3",
+    "KURNOOL": "105.6",
+
+
+
+    // Arunachal Pradesh
+    "LOHIT": "167.1",
+    "EAST SIANG": "206.9",
+    "SUBANSIRI F.D": "75.9",
+    "TIRAP": "218.7",
+    "ANJAW (LOHIT)": "167.1",
+    "LOWER DIBANG": "167.2",
+    "CHANGLANG": "275",
+    "PAPUM PARE": "214.7",
+    "LOW SUBANSIRI": "78.5",
+    "UPPER SIANG": "264.9",
+    "WEST SIANG": "126.8",
+    "DIBANG VALLEY": "167.2",
+    "WEST KAMENG": "233.9",
+    "EAST KAMENG": "138.2",
+    "TAWANG(W KAME)": "233.9",
+    "KURUNG KUMEY": "92.3",
+
+    // Assam
+    "CACHAR": "182.4",
+    "DARRANG": "95.4",
+    "GOALPARA": "157.7",
+    "KAMRUP": "106.6",
+    "LAKHIMPUR": "140.3",
+    "NORTH CACHAR": "196.4",
+    "NAGAON": "120",
+    "SIVASAGAR": "96.3",
+    "BARPETA": "142.1",
+    "DHUBRI": "155.1",
+    "DIBRUGARH": "136.9",
+    "JORHAT": "121.7",
+    "KARIMGANJ": "240.4",
+    "KOKRAJHAR": "159.5",
+    "SHONITPUR": "109.7",
+    "GOLAGHAT": "103.7",
+    "TINSUKIA": "118.7",
+    "HAILAKANDI": "150.6",
+    "DHEMAJI(LAKHI)": "140.3",
+    "KARBI ANGLONG": "100.1",
+    "UDALGURI(DARA)": "95.4",
+    "KAMRUP METROP": "106.6",
+    "CHIRANG(BONGAI)": "168.2",
+    "BAKSA BARPETA": "142.1",
+    "BONGAIGAON": "168.2",
+    "MORIGAON": "119.3",
+    "NALBARI": "110.4",
+
+    // Bihar
+    "BHAGALPUR": "88.5",
+    "EAST CHAMPARAN": "73.2",
+    "DARBHANGA": "66.7",
+    "GAYA": "53.7",
+    "MUNGER": "71.4",
+    "MUZAFFARPUR": "63.9",
+    "WEST CHAMPARAN": "65.9",
+    "PURNEA": "83.4",
+    "GOPALGANJ": "55.9",
+    "MADHUBANI": "76",
+    "AURANGABAD": "44.3",
+    "BEGUSARAI": "63",
+    "BHOJPUR": "45.1",
+    "NALANDA": "50.7",
+    "PATNA": "55.5",
+    "KATIHAR": "74.2",
+    "KHAGARIA": "82.2",
+    "SARAN": "59.2",
+    "MADHEPURA": "70.6",
+    "NAWADA": "62.4",
+    "ROHTAS": "43",
+    "SAMASTIPUR": "64.4",
+    "SITAMARHI": "71.7",
+    "SIWAN": "43.3",
+    "VAISHALI": "73.3",
+    "JAHANABAD": "39.1",
+    "BUXAR": "53.7",
+    "ARARIA": "84",
+    "BANKA": "84.6",
+    "BHABUA": "42.4",
+    "JAMUI": "70.9",
+    "KISHANGANJ": "80.4",
+    "SHEIKHPURA": "58.1",
+    "SUPAUL": "74.7",
+    "LAKHISARAI": "71.4",
+    "SHEOHAR": "71.7",
+    "ARWAL": "33.3",
+    "SAHARSA": "94.6",
+
+    // Chandigarh
+    "BASTAR": "81.4",
+    "BILASPUR": "54.8",
+    "DURG": "56.5",
+    "RAIGARH": "49.5",
+    "RAIPUR": "52.6",
+    "SURGUJA": "50.7",
+    "RAJNANDGAON": "60.9",
+    "DANTEWADA": "93.2",
+    "KANKER (NORTH)": "73.7",
+    "JANJGIR-CHAMPA": "44.1",
+    "KORBA": "47.1",
+    "JASHPUR": "75.5",
+    "DHAMTARI": "57.8",
+    "MAHASAMUND": "49.8",
+    "KORIYA": "29.2",
+    "KOWARDHA (KABIRDHAM)": "58.9",
+    "NARAYANPUR": "84.7",
+    "BIJAPUR": "92.8",
+
+    // Daman and Diu
+
+    "DNH": "38.6",
+    "DAMAN": "38.6",
+    "DIU": "32.5",
+
+    //Delhi
+    "NEW DELHI": "20.5",
+    "CENTRAL DELHI": "20.5",
+    "EAST DELHI": "20.5",
+    "NORTH DELHI": "20.5",
+    "NE DELHI": "20.5",
+    "SW DELHI": "20.5",
+    "NW DELHI": "20.5",
+    "SOUTH DELHI": "20.5",
+    "WEST DELHI": "20.5",
+
+    //goa
+    "NORTH GOA": "165.7",
+    "SOUTH GOA": "145.7",
+
+    //gujrat
+    "AHMEDABAD": "19.1",
+    "BANASKANTHA": "16.7",
+    "BARODA": "25.9",
+    "BHARUCH": "22.9",
+    "VALSAD": "48",
+    "DANGS": "66",
+    "KHEDA": "18",
+    "MEHSANA": "18.4",
+    "PANCHMAHALS": "25.2",
+    "SABARKANTHA": "18.5",
+    "SURAT": "31.7",
+    "GANDHINAGAR": "18.5",
+    "NARMADA(BRC)": "26.4",
+    "NAVSARI(VSD)": "42.1",
+    "ANAND(KHR)": "19.2",
+    "PATAN(MHSN)": "10.2",
+    "DAHOD(PNML)": "27.8",
+    "TAPI(SRT)": "28",
+    "AMRELI": "25.4",
+    "BHAVNAGAR": "22.2",
+    "JAMNAGAR": "16.8",
+    "JUNAGADH": "27.6",
+    "KUTCH": "12.5",
+    "RAJKOT": "22.9",
+    "SURENDRANAGAR": "17.5",
+    "PORBANDAR": "25.2",
+
+    //haryana
+    "AMBALA": "34.4",
+    "GURGAON": "12.7",
+    "HISAR": "13",
+    "JIND": "15.8",
+    "KARNAL": "26.2",
+    "MAHENDRAGARH": "14.1",
+    "ROHTAK": "13.4",
+    "BHIWANI": "13.4",
+    "FARIDABAD": "18.7",
+    "KURUKSHETRA": "23.5",
+    "SIRSA": "13.4",
+    "SONEPAT(RTK)": "20.4",
+    "YAMUNANAGAR": "36",
+    "KAITHAL": "14.2",
+    "PANIPAT": "21.8",
+    "REWARI": "13.2",
+    "FATEHABAD": "12.4",
+    "JHAJJAR": "11",
+    "PANCHKULA": "18.7",
+    "MEWAT": "20.7",
+    "PALWAL(FRD)": "20",
+
+    //himachal
+    "BILASPUR": "27",
+    "CHAMBA": "48.7",
+    "KANGRA": "48.1",
+    "KINNAUR": "35.4",
+    "KULLU": "32",
+    "LAHUL & SPITI": "52.2",
+    "MANDI": "34.4",
+    "HAMIRPUR": "41.1",
+    "SHIMLA": "32.6",
+    "SIRMAUR": "44",
+    "SOLAN": "44.1",
+    "UNA": "32.1",
+
+    //j and k
+    "ANANTNAG": "39.5",
+    "BARAMULLA": "47.6",
+    "DODA": "40.9",
+    "JAMMU": "31.5",
+    "KATHUA": "29",
+    "LADAKH (LEH)": "7.2",
+    "UDHAMPUR": "42.6",
+    "BADGAM": "32.8",
+    "KUPWARA": "51.1",
+    "PULWAMA": "21",
+    "SRINAGAR": "31.7",
+    "KARGIL": "14.5",
+    "POONCH": "27.4",
+    "RAJOURI": "38.8",
+    "BANDIPORE": "38",
+    "GANDERWAL": "31.7",
+    "KULGAM/(ANT)": "38.1",
+    "SHOPAN": "31.9",
+    "SAMBA": "31.5",
+    "KISTWAR": "40.9",
+    "REASI": "42.2",
+    "RAMBAN(DDA)": "42.1",
+
+    //jharkhand
+    "BOKARO": "77.9",
+    "DHANBAD": "99.5",
+    "DUMKA": "124.5",
+    "HAZARIBAG": "81.8",
+    "PALAMU": "46.6",
+    "RANCHI": "78.7",
+    "SAHIBGANJ": "99.8",
+    "WEST SINGHBHUM": "63.5",
+    "DEOGHAR": "76.5",
+    "GIRIDIH": "80.3",
+    "GODDA": "78.7",
+    "GUMLA": "68.3",
+    "LOHARDAGA": "57.7",
+    "CHATRA": "55.7",
+    "KODERMA": "86.5",
+    "PAKUR": "143.7",
+    "EAST SINGHBHUM": "68.4",
+    "GARHWA": "52.6",
+    "SERAIKELA-KHA": "71.8",
+    "JAMTARA": "127.6",
+    "LATEHAR": "66.6",
+    "SIMDEGA": "58.8",
+    "KHUNTI(RANCHI)": "71.4",
+    "RAMGARH": "68.8",
+
+    //karnataka
+    "UTTAR KANNADA": "155.1",
+    "DAKSHIN KANNADA": "236.9",
+    "UDUPI": "223.8",
+    "BELGAM": "116.6",
+    "BIDAR": "93.5",
+    "BIJAPUR": "111.7",
+    "DHARWAD": "120.4",
+    "GULBARGA": "105.3",
+    "YADGIR": "123.4",
+    "RAICHUR": "110.5",
+    "BAGALKOTE": "112.8",
+    "GADAG": "121.1",
+    "HAVERI": "119",
+    "KOPPAL": "108.1",
+    "BANGALORE RURAL": "171.8",
+    "BELLARY": "116.3",
+    "CHIKMAGALUR": "167.4",
+    "CHITRADURGA": "116.4",
+    "KODAGU": "201.7",
+    "HASSAN": "156",
+    "KOLAR": "148.2",
+    "MANDYA": "153.1",
+    "MYSORE": "152.4",
+    "SHIMOGA": "137.5",
+    "TUMKUR": "148.9",
+    "BANGALORE URBAN": "159.7",
+    "CHAMARAJANAGARA": "157.8",
+    "DAVANGERE": "124.4",
+    "RAMNAGAR(BNGR)": "174.1",
+    "CHICKBALLAPUR": "156.8",
+
+    //kerela
+    "ALAPPUZHA": "332.9",
+    "CANNUR": "229.4",
+    "ERNAKULAM": "299.9",
+    "KOTTAYAM": "316.6",
+    "KOZHIKODE": "262.1",
+    "MALAPPURAM": "290.4",
+    "PALAKKAD": "263.8",
+    "KOLLAM": "362.7",
+    "THRISSUR": "296.3",
+    "THIRUVANANTHAPURAM": "268",
+    "IDUKKI": "343.2",
+    "KASARGOD": "234.9",
+    "PATHANAMTHITTA": "359.4",
+    "WAYANAD": "213.1",
+
+    //lakshadweep
+    "LAKSHADWEEP": "157.1",
+
+    //madhya pradesh
+    "BETUL": "49.4",
+    "VIDISHA": "24",
+    "BHIND": "39.5",
+    "DATIA": "39.8",
+    "DEWAS": "34.4",
+    "DHAR": "34.8",
+    "GUNA": "28.6",
+    "GWALIOR": "41.5",
+    "HOSHANGABAD": "37.4",
+    "INDORE": "38.3",
+    "JHABUA": "39",
+    "MANDSAUR": "35.8",
+    "MORENA": "25.8",
+    "KHANDWA": "35.4",
+    "KHARGONE": "31.5",
+    "RAISEN": "32.9",
+    "RAJGARH": "27",
+    "RATLAM": "41.1",
+    "SEHORE": "33.5",
+    "SHAJAPUR": "29.2",
+    "SHIVPURI": "31.8",
+    "UJJAIN": "35",
+    "BHOPAL": "33.8",
+    "HARDA": "37",
+    "NEEMUCH": "31.2",
+    "SHEOPUR": "27.7",
+    "BARWANI": "35.5",
+    "ASHOKNAGAR(GNA)": "25.1",
+    "BURHANPUR": "45.7",
+    "ALIRAJPUR(JBA)": "30.8",
+    "BALAGHAT": "56.4",
+    "CHHATARPUR": "34.2",
+    "CHHINDWARA": "43.5",
+    "JABALPUR": "32.9",
+    "MANDLA": "40.4",
+    "NARSINGHPUR": "30",
+    "PANNA": "31.4",
+    "REWA": "31.4",
+    "SAGAR": "33.3",
+    "SATNA": "32.1",
+    "SEONI": "44.4",
+    "SHAHDOL": "31.5",
+    "SIDHI": "35.5",
+    "TIKAMGARH": "29.4",
+    "KATNI": "30.9",
+    "DINDORI": "37.2",
+    "UMARIA": "38.7",
+    "DAMOH": "32.6",
+    "ANUPPUR(SHAHD)": "47",
+    "SINGRAULI": "38.2",
+
+    //maharashtra
+    "MUMBAI CITY": "77.1",
+    "RAIGAD": "114.6",
+    "RATNAGIRI": "143.1",
+    "THANE": "84.5",
+    "SINDHUDURG": "142.9",
+    "MUMBAI SUB": "77.1",
+    "AHMEDNAGAR": "73.8",
+    "DHULE": "43.5",
+    "JALGAON": "46.1",
+    "KOLHAPUR": "125",
+    "NASHIK": "68",
+    "PUNE": "87.1",
+    "SANGLI": "108.3",
+    "SATARA": "95.6",
+    "SOLAPUR": "94.5",
+    "NANDURBAR": "37.2",
+    "AURANGABAD": "59.2",
+    "BEED": "71.3",
+    "NANDED": "79.9",
+    "OSMANABAD": "85.3",
+    "PARBHANI": "74.4",
+    "LATUR": "81",
+    "JALNA": "61.2",
+    "HINGOLI": "66.2",
+    "AKOLA": "52.8",
+    "AMRAVATI": "53",
+    "BHANDARA": "61.8",
+    "BULDHANA": "52.7",
+    "CHANDRAPUR": "65.1",
+    "NAGPUR": "56.9",
+    "YAVATMAL": "61.9",
+    "WARDHA": "57.9",
+    "GADCHIROLI": "68.8",
+    "WASHIM": "61",
+    "GONDIA": "58.9",
+
+    //manipur
+    "IMPHAL EAST": "144",
+    "SENAPATI": "156",
+    "TAMENGLONG": "376.1",
+    "CHANDEL": "254.9",
+    "UKHRUL": "122.7",
+    "THOUBAL": "94.6",
+    "BISHNUPUR": "237",
+    "IMPHAL WEST": "144.5",
+    "CHURACHANDPUR": "173.2",
+
+    //meghalaya
+    "EAST KHASI HI": "277.9",
+    "JAINTIA HILLS": "517.7",
+    "EAST GARO HIL": "154.1",
+    "RI-BHOI": "125.4",
+    "SOUTH GARO HI": "155.7",
+    "W KHASI HILL": "192.5",
+    "WEST GARO HIL": "155.7",
+
+    //mizoram
+    "AIZAWL": "254.5",
+    "CHAMPHAI": "226.7",
+    "KOLASIB": "219.8",
+    "LUNGLEI": "245.4",
+    "CHHIMTUIPUI": "254.5",
+    "LAWNGTLAI": "231.5",
+    "MAMIT": "254.5",
+    "SAIHA": "214.2",
+    "SERCHHIP": "167.3",
+
+    //nagaland
+    "KOHIMA": "130.2",
+    "TUENSANG": "122.5",
+    "MOKOKCHUNG": "137.3",
+    "DIMAPUR": "125",
+    "WOKHA": "127.7",
+    "MON": "62.1",
+    "ZUNHEBOTO": "122.5",
+    "PHEK": "130.2",
+    "KEPHRIE": "122.5",
+    "LONGLENG": "122.5",
+    "PEREN": "130.2",
+
+    //orissa
+    "BALASORE": "190.1",
+    "BOLANGIR": "69.5",
+    "KANDHAMAL/PHU": "114.6",
+    "CUTTACK": "124.5",
+    "DHENKANAL": "125.5",
+    "GANJAM": "198.4",
+    "KALAHANDI": "72.3",
+    "KEONDJHARGARH": "113.6",
+    "KORAPUT": "147.6",
+    "MAYURBHANJ": "119.1",
+    "PURI": "185.3",
+    "SAMBALPUR": "58.2",
+    "SUNDARGARH": "50.4",
+    "BHADRAK": "159.5",
+    "JAJPUR": "134.6",
+    "KENDRAPARA": "179.9",
+    "ANGUL": "98.1",
+    "NAWAPARA": "60.7",
+    "MALKANGIRI": "116.3",
+    "NAWARANGPUR": "102.6",
+    "NAYAGARH": "152.2",
+    "KHURDA": "167.7",
+    "BARGARH": "51.2",
+    "JHARSUGUDA": "63.8",
+    "DEOGARH": "58.2",
+    "RAYAGADA": "109.4",
+    "GAJAPATI": "141.8",
+    "JAGATSINGHAPU": "145.1",
+    "BOUDHGARH": "114.6",
+    "SONEPUR": "56.9",
+
+    //pondicherry
+    "PONDICHERRY": "270.7",
+    "KARAIKAL": "275.7",
+    "MAHE": "270.7",
+    "YANAM": "270.7",
+
+    //punjab
+    "AMRITSAR": "28.7",
+    "BATHINDA": "19.2",
+    "FEROZEPUR": "12.3",
+    "GURDASPUR": "37.2",
+    "HOSHIARPUR": "31.5",
+    "JALANDHAR": "21.9",
+    "KAPURTHALA": "31.4",
+    "LUDHIANA": "25.7",
+    "PATIALA": "21.1",
+    "RUPNAGAR": "19.7",
+    "SANGRUR": "20.4",
+    "FARIDKOT": "9.8",
+    "MOGA": "20.9",
+    "NAWANSHAHR": "29.6",
+    "FATEHGARH SAH": "18.9",
+    "MUKTSAR": "11.2",
+    "MANSA": "18.2",
+    "BARNALA": "18.3",
+    "SAS NAGAR(MGA)": "20.2",
+    "TARN TARAN": "17.8",
+
+    //rajasthan
+    "BARMER": "4.1",
+    "BIKANER": "4.4",
+    "CHURU": "9.9",
+    "SRI GANGANAGA": "3.1",
+    "JAISALMER": "3.1",
+    "JALORE": "9.2",
+    "JODHPUR": "4.9",
+    "NAGAUR": "7.9",
+    "PALI": "11.9",
+    "HANUMANGARH": "3.4",
+    "AJMER": "9.7",
+    "ALWAR": "20",
+    "BANSWARA": "24.4",
+    "BHARATPUR": "17.7",
+    "BHILWARA": "11.7",
+    "BUNDI": "16.7",
+    "CHITTORGARH": "18.1",
+    "DUNGARPUR": "14.8",
+    "JAIPUR": "11.8",
+    "JHALAWAR": "27",
+    "JHUNJHUNU": "13.3",
+    "KOTA": "24.9",
+    "SAWAI MADHOPUR": "19.4",
+    "SIKAR": "10.7",
+    "SIROHI": "12.9",
+    "TONK": "13.9",
+    "UDAIPUR": "15.2",
+    "DHOLPUR": "26.3",
+    "BARAN": "25.2",
+    "DAUSA": "17.1",
+    "RAJSAMAND": "13.7",
+    "KARAULI": "17",
+    "PRATAPGARH(CHT": "32.8",
+
+    //sikkim
+    "NORTH SIKKIM": "265",
+    "EAST SIKKIM": "154.7",
+    "WEST SIKKIM": "265",
+    "SOUTH SIKKIM": "154.7",
+
+    //tamil nadu
+    "VELLORE": "163.2",
+    "COIMBATORE": "151.9",
+    "DHARMAPURI": "180.5",
+    "KANYAKUMARI": "226.3",
+    "CHENNAI": "266.5",
+    "MADURAI": "206.2",
+    "NILGIRIS": "217.9",
+    "RAMANATHAPURA": "182.4",
+    "SALEM": "190.9",
+    "THANJAVUR": "183.8",
+    "TIRUCHIRAPPAL": "173.2",
+    "TIRUNELVELI": "157.5",
+    "ERODE": "158.9",
+    "PUDUKKOTTAI": "158",
+    "DINDIGUL": "188.1",
+    "VIRUDHUNAGAR": "180.7",
+    "SIVAGANGA": "187.1",
+    "THOOTHUKUDI": "151.3",
+    "TIRUVANNAMALA": "194.2",
+    "NAGAPATTINAM": "241.2",
+    "VILUPPURAM": "186.5",
+    "CUDDALORE": "220.2",
+    "KANCHIPURAM": "225.8",
+    "TIRUVALLUR": "211",
+    "THENI": "167.7",
+    "NAMAKKAL": "156.8",
+    "KARUR": "144.6",
+    "PERAMBALUR": "191",
+    "TIRUVARUR": "200.3",
+    "KRISHNAGIRI": "176.9",
+    "ARIYALUR": "193.4",
+    "TIRUPUR": "147.7",
+
+    //tripura
+    "NORTH TRIPURA": "173.8",
+    "SOUTH TRIPURA": "175.1",
+    "WEST TRIPURA": "174.9",
+    "DHALAI": "182.8",
+
+    //uttar pradesh
+    "ALLAHABAD": "34.6",
+    "AZAMGARH": "41.5",
+    "BAHRAICH": "51.2",
+    "BALLIA": "41.6",
+    "BANDA": "36.4",
+    "BARABANKI": "50.3",
+    "BASTI": "46.5",
+    "DEORIA": "53.1",
+    "FAIZABAD": "51",
+    "FARRUKHABAD": "52.1",
+    "FATEHPUR": "39.4",
+    "GHAZIPUR": "49.2",
+    "GONDA": "59.1",
+    "GORAKHPUR": "69.1",
+    "HARDOI": "57.6",
+    "JAUNPUR": "32.1",
+    "KANPUR NAGAR": "54.9",
+    "KHERI LAKHIMP": "63.8",
+    "LUCKNOW": "47.9",
+    "MIRZAPUR": "32.9",
+    "PRATAPGARH": "34.3",
+    "RAE BARELI": "53.5",
+    "SITAPUR": "60.1",
+    "SULTANPUR": "45.4",
+    "UNNAO": "56.1",
+    "VARANASI": "37.5",
+    "SONBHADRA": "34.8",
+    "MAHARAJGANJ": "72.3",
+    "MAU": "46.6",
+    "SIDDHARTH NGR": "63.4",
+    "KUSHINAGAR": "71.4",
+    "AMBEDKAR NAGAR": "40.2",
+    "KANNAUJ": "61.4",
+    "BALRAMPUR": "72.6",
+    "KAUSHAMBI": "36.1",
+    "SAHUJI MAHARA": "36.7",
+    "KANPUR DEHAT": "44.4",
+    "CHANDAULI": "31.8",
+    "SANT KABIR NGR": "50.9",
+    "SANT RAVIDAS": "31.8",
+    "SHRAVASTI NGR": "51.2",
+    "AGRA": "28.1",
+    "ALIGARH": "39",
+    "BAREILLY": "57.9",
+    "BIJNOR": "40",
+    "BADAUN": "58.8",
+    "BULANDSHAHAR": "36.2",
+    "ETAH": "41.6",
+    "ETAWAH": "45",
+    "HAMIRPUR": "33.3",
+    "JALAUN": "47.2",
+    "JHANSI": "37.2",
+    "LALITPUR": "34.1",
+    "MAINPURI": "40.1",
+    "MATHURA": "23.6",
+    "MEERUT": "41.6",
+    "MORADABAD": "47.7",
+    "MUZAFFARNAGAR": "34.5",
+    "PILIBHIT": "73.6",
+    "RAMPUR": "34",
+    "SAHARANPUR": "34.5",
+    "SHAHJAHANPUR": "68.5",
+    "GHAZIABAD": "37",
+    "FIROZABAD": "35.5",
+    "MAHOBA": "24.9",
+    "MAHAMAYA NAGA": "31.5",
+    "AURAIYA": "50.7",
+    "BAGPAT": "21.6",
+    "JYOTIBA PHULE": "48.6",
+    "GAUTAM BUDDHA": "35.8",
+    "KANSHIRAM NAG": "53.4",
+
+    //uttarakand
+    "ALMORA": "57.2",
+    "CHAMOLI": "43.5",
+    "DEHRADUN": "62.6",
+    "GARHWAL PAURI": "55.7",
+    "NAINITAL": "82.2",
+    "PITHORAGARH": "65.3",
+    "GARHWAL TEHRI": "48.4",
+    "UTTARKASHI": "59.6",
+    "HARIDWAR": "29.7",
+    "CHAMPAWAT": "77.4",
+    "RUDRAPRAYAG": "52.6",
+    "UDHAM SINGH N": "73.5",
+    "BAGESHWAR": "57.2",
+
+    //west bengal
+    "COOCH BEHAR": "141.3",
+    "DARJEELING": "118.9",
+    "JALPAIGURI": "159.9",
+    "MALDA": "102.5",
+    "SOUTH DINAJPUR": "112.5",
+    "NORTH DINAJPUR": "90.7",
+    "BANKURA": "105.2",
+    "BIRBHUM": "105.1",
+    "BURDWAN": "99.8",
+    "HOOGHLY": "102.1",
+    "HOWRAH": "99.1",
+    "PURULIA": "91.5",
+    "MURSHIDABAD": "126.3",
+    "NADIA": "100.2",
+    "NORTH 24 PARG": "130.9",
+    "SOUTH 24 PARG": "218.4",
+    "EAST MIDNAPOR": "196.9",
+    "WEST MIDNAPOR": "106.5",
+    "KOLKATA": "155.3"
+
+
+};
+
+
+    // Function to Populate States
+    function print_state(state_id){
+        var option_str = document.getElementById(state_id);
+        option_str.length = 0;
+        option_str.options[0] = new Option('Select State','');
+        option_str.selectedIndex = 0;
+        for (var i = 0; i < state_arr.length; i++) {
+            option_str.options[option_str.length] = new Option(state_arr[i], state_arr[i]);
+        }
+    }
+
+    // Function to Populate Cities based on Selected State
+    function print_city(city_id, state_index){
+        var option_str = document.getElementById(city_id);
+        option_str.length = 0;	// Clear existing options
+        option_str.options[0] = new Option('Select City','');
+        option_str.selectedIndex = 0;
+        if(state_index === 0){
+            // If 'Select State' is chosen, do not populate cities
+            return;
+        }
+        var city_arr = s_a[state_index].split("|");
+        for (var i = 0; i < city_arr.length; i++) {
+            var city = city_arr[i].trim();
+            option_str.options[option_str.length] = new Option(city, city);
+        }
+
+        // After populating cities, attach the event listener for rainfall
+        attachRainfallListener(city_id);
+    }
+
+    // Function to Attach Event Listener to City Selector
+    function attachRainfallListener(city_id){
+        var citySelect = document.getElementById(city_id);
+        // Remove existing listener to prevent multiple bindings
+        citySelect.removeEventListener('change', displayRainfall);
+        citySelect.addEventListener('change', displayRainfall);
+    }
+
+    // Function to Display Rainfall Data
+    function displayRainfall(){
+        var selectedCity = this.value;
+        var rainfall = rainfall_data[selectedCity] || "";
+        document.getElementById('Rainfall').value = rainfall;
+    }
+
+    // Initialize the State Selector on Page Load
+    window.onload = function(){
+        print_state('sts');
+    };
+</script>
+
+{% endblock %}
